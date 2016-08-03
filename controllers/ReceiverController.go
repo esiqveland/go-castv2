@@ -17,7 +17,11 @@ type ReceiverController struct {
 	Incoming chan *ReceiverStatus
 }
 
+// Application ID of the default chromecast media player
+const DefaultMediaPlayerAppID = "CC1AD845"
+
 var getStatus = castv2.PayloadHeaders{Type: "GET_STATUS"}
+var launchApp = castv2.PayloadHeaders{Type: "LAUNCH"}
 
 func NewReceiverController(client *castv2.Client, sourceId, destinationId string) *ReceiverController {
 	controller := &ReceiverController{
@@ -60,6 +64,12 @@ type ReceiverStatus struct {
 	castv2.PayloadHeaders
 	Applications []*ApplicationSession `json:"applications"`
 	Volume       *Volume               `json:"volume,omitempty"`
+}
+
+type ReceiverLaunch struct {
+	castv2.PayloadHeaders
+	Applications []*ApplicationSession `json:"applications"`
+	AppId        string `json:"appId"`
 }
 
 func (s *ReceiverStatus) GetSessionByNamespace(namespace string) *ApplicationSession {
@@ -109,6 +119,13 @@ func (c *ReceiverController) GetStatus(timeout time.Duration) (*ReceiverStatus, 
 	}
 
 	return response.Status, nil
+}
+
+func (c *ReceiverController) LaunchApplication(timeout time.Duration, appID string) (*api.CastMessage, error) {
+	return c.channel.Request(&ReceiverLaunch{
+		PayloadHeaders: castv2.PayloadHeaders{Type: launchApp.Type},
+		AppId: appID,
+	}, timeout)
 }
 
 func (c *ReceiverController) SetVolume(volume *Volume, timeout time.Duration) (*api.CastMessage, error) {
